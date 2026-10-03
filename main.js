@@ -1,213 +1,181 @@
 (() => {
   'use strict';
-  document.documentElement.classList.add('js');
-  document.body.classList.add('motion-on');
   document.getElementById('year').textContent = new Date().getFullYear();
-  const observer = new IntersectionObserver(entries => entries.forEach(entry => {
-    if (entry.isIntersecting) { entry.target.classList.add('visible'); observer.unobserve(entry.target); }
-  }), {threshold:.08});
-  document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
-  document.querySelectorAll('.project-grid,.process-grid,.services').forEach(group => {
-    Array.from(group.children).forEach((child,index) => child.style.setProperty('--reveal-delay', `${index*90}ms`));
-  });
-  const finePointer = window.matchMedia('(hover: hover) and (pointer: fine)');
-  document.querySelectorAll('.project').forEach(project => {
-    const art = project.querySelector('.art');
-    project.addEventListener('pointermove',event => {
-      if (!finePointer.matches || !document.body.classList.contains('motion-on')) return;
-      const rect = project.getBoundingClientRect();
-      art.style.setProperty('--tilt-x', `${-(event.clientY-rect.top-rect.height/2)/rect.height*7}deg`);
-      art.style.setProperty('--tilt-y', `${(event.clientX-rect.left-rect.width/2)/rect.width*7}deg`);
-      art.style.setProperty('--light-x', `${(event.clientX-rect.left)/rect.width*100}%`);
-      art.style.setProperty('--light-y', `${(event.clientY-rect.top)/rect.height*100}%`);
-    });
-    project.addEventListener('pointerleave',() => {art.style.setProperty('--tilt-x','0deg');art.style.setProperty('--tilt-y','0deg');});
-  });
-  document.querySelectorAll('.pill').forEach(button => {
-    button.addEventListener('pointermove',event => {
-      if (!finePointer.matches || !document.body.classList.contains('motion-on')) return;
-      const rect = button.getBoundingClientRect();
-      button.style.setProperty('--mag-x',`${(event.clientX-rect.left-rect.width/2)*.12}px`);
-      button.style.setProperty('--mag-y',`${(event.clientY-rect.top-rect.height/2)*.12}px`);
-    });
-    button.addEventListener('pointerleave',() => {button.style.setProperty('--mag-x','0px');button.style.setProperty('--mag-y','0px');});
-  });
-  const projects = [
-    {title:'Forma', description:'An illustrative commerce experience for a design-led objects brand. An editorial approach lets materials, proportions, and products lead the experience.', direction:'Warm blush, sculptural forms, oversized type, and a quiet product discovery flow.'},
-    {title:'Pulse', description:'An illustrative music discovery platform. A vibrant visual rhythm translates the energy of sound into an expressive interface.', direction:'Coral and crimson, rhythmic shapes, bold headlines, and responsive interaction design.'},
-    {title:'Orbit', description:'An illustrative digital workspace for connecting ideas. A focused interface creates room to explore, organize, and discover.', direction:'Deep burgundy, luminous pink, orbital geometry, and a clear content hierarchy.'}
-  ];
+  const projects = {
+    orbit: {
+      title: 'Orbit', subtitle: 'A calmer workspace for moving ideas forward.',
+      scope: 'Illustrative product engineering brief', stack: 'TypeScript · React · Node.js · PostgreSQL',
+      problem: 'Small teams often lose context between task lists, chat messages, and status meetings. This demo explores a single board where ownership, progress, and the next action are immediately clear.',
+      approach: 'Start with a focused task model: title, owner, status, priority, and activity history. Give common actions a short path and keep the wider project context visible while editing.',
+      decisions: ['Use optimistic task updates with a visible pending state, then reconcile with the server. Restore the previous state and show a retry action if a save fails.', 'Validate project membership on every server operation. Model tasks and activity events separately so the board stays fast while history remains traceable.', 'Use version checks on edits to avoid silently overwriting a teammate’s newer change. Provide keyboard-accessible status controls alongside any drag interaction.'],
+      tradeoff: 'A simple board and explicit refresh would come before live collaboration. Real-time updates add synchronization and conflict-handling costs; introduce them only when the core workflow is reliable.',
+      validation: ['Exercise create, edit, move, and undo flows with keyboard-only input.', 'Test failed saves, stale versions, and unauthorized project access.', 'Measure board interaction latency with a large sample project and a slow connection.'],
+      outcome: 'Intended outcome: a team can identify ownership and the next step without opening several tools. This is a demo brief; no production adoption or performance results are claimed.',
+      architecture: ['Board interface', 'Task API', 'PostgreSQL']
+    },
+    forma: {
+      title: 'Forma', subtitle: 'A considered path from discovery to checkout.',
+      scope: 'Illustrative commerce engineering brief', stack: 'TypeScript · React · Commerce API · PostgreSQL',
+      problem: 'A shopping journey becomes frustrating when product choices are unclear, carts lose their state, or checkout errors appear too late. Forma explores a compact storefront with a predictable path to purchase.',
+      approach: 'Keep product options, availability, and price close to the decision. Preserve the cart across visits, make totals easy to understand, and associate validation messages with the input that needs attention.',
+      decisions: ['Treat the server as the authority for prices, inventory, and final totals. Revalidate the cart before payment rather than trust values supplied by a browser.', 'Persist item identifiers and quantities, then reconcile them with current availability when a session resumes.', 'Use idempotency keys for order creation so retrying a request does not create duplicate orders. Keep payment processing within a hosted provider flow.'],
+      tradeoff: 'A hosted checkout reduces customization but narrows the security and maintenance burden. Invest custom interface work in product discovery and cart clarity first.',
+      validation: ['Test stock changes, expired sessions, interrupted requests, and duplicate submissions.', 'Review form labels, error announcements, focus order, and touch target sizes.', 'Compare the complete purchase path on narrow screens and a throttled connection.'],
+      outcome: 'Intended outcome: shoppers always understand what is in their cart and what happens next. Displayed products and prices are sample data; this is not a live shop.',
+      architecture: ['Storefront', 'Cart & order API', 'Hosted checkout']
+    },
+    pulse: {
+      title: 'Pulse', subtitle: 'Useful answers from complex information.',
+      scope: 'Illustrative analytics engineering brief', stack: 'TypeScript · React · SQL · Aggregation API',
+      problem: 'Dashboards can display a lot of numbers without answering a useful question. Pulse explores a product overview that makes activity, completion, and data freshness understandable at a glance.',
+      approach: 'Define each metric before drawing its chart. Give the date range a clear timezone, explain missing data, and show the same series in an accessible table when charts are not enough.',
+      decisions: ['Aggregate events on the server into bounded time buckets. Return metric definitions and timestamps with each response so the interface can explain what it shows.', 'Cache repeated queries by date range and filter, while showing when results were last updated. Distinguish stale data, zero activity, and failed requests.', 'Cancel superseded filter requests and keep the last valid result visible during loading. Avoid allowing an older response to overwrite a newer selection.'],
+      tradeoff: 'Precomputed summaries make common queries fast but add storage and refresh complexity. Start with indexed queries and measure before adding an aggregation pipeline.',
+      validation: ['Check timezone boundaries, empty ranges, missing buckets, and delayed events.', 'Verify keyboard access and text alternatives for every visualization.', 'Test rapid filter changes, error recovery, and large date ranges.'],
+      outcome: 'Intended outcome: a product team can distinguish a meaningful trend from incomplete data. All figures in the preview are fictional sample data, not portfolio results.',
+      architecture: ['Event store', 'Aggregation API', 'Chart & table views']
+    }
+  };
   const dialog = document.getElementById('project-dialog');
+  let opener;
+  const list = items => `<ul>${items.map(item => `<li>${item}</li>`).join('')}</ul>`;
   document.querySelectorAll('[data-project]').forEach(button => button.addEventListener('click', () => {
-    const project = projects[Number(button.dataset.project)];
-    document.getElementById('dialog-title').textContent = project.title;
-    document.getElementById('dialog-description').textContent = project.description;
-    document.getElementById('dialog-direction').textContent = project.direction;
+    const p = projects[button.dataset.project];
+    opener = button;
+    document.getElementById('case-content').innerHTML = `<h2 class="case-title" id="dialog-title">${p.title}</h2><p class="case-subtitle">${p.subtitle}</p><div class="case-meta"><div><span>DEMO SCOPE</span><p>${p.scope}</p></div><div><span>PROPOSED STACK</span><p>${p.stack}</p></div></div><section class="case-section"><h3>01 / The problem</h3><p>${p.problem}</p></section><section class="case-section"><h3>02 / A considered approach</h3><p>${p.approach}</p><div class="architecture" aria-label="Proposed architecture">${p.architecture.map((item,i) => `${i ? '<b aria-hidden="true">/</b>' : ''}<span>${item}</span>`).join('')}</div></section><section class="case-section"><h3>03 / Engineering decisions</h3>${list(p.decisions)}</section><section class="case-section"><h3>04 / The trade-off</h3><p>${p.tradeoff}</p></section><section class="case-section"><h3>05 / How to validate it</h3>${list(p.validation)}</section><section class="case-section"><h3>06 / Intended outcome</h3><p>${p.outcome}</p></section>`;
     dialog.showModal();
+    dialog.scrollTop = 0;
     document.body.style.overflow = 'hidden';
   }));
   document.querySelectorAll('.dialog-close,.dialog-done').forEach(button => button.addEventListener('click', () => dialog.close()));
-  dialog.addEventListener('close', () => { document.body.style.overflow = ''; });
+  dialog.addEventListener('close', () => { document.body.style.overflow = ''; opener?.focus({ preventScroll: true }); });
   dialog.addEventListener('click', event => {
-    const rect = dialog.getBoundingClientRect();
-    if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) dialog.close();
+    if (event.target !== dialog) return;
+    const box = dialog.getBoundingClientRect();
+    if (event.clientX < box.left || event.clientX > box.right || event.clientY < box.top || event.clientY > box.bottom) dialog.close();
   });
-  const TOTAL_FRAMES = 240;
+
   const canvas = document.getElementById('scroll-canvas');
-  const ctx = canvas.getContext('2d',{alpha:false});
+  const ctx = canvas.getContext('2d', { alpha: false });
   const hero = document.querySelector('.hero');
   const stage = document.querySelector('.hero-stage');
-  const counter = document.querySelector('.frame-count');
-  const header = document.querySelector('header');
-  // The hero is an explicitly requested scroll experience. Its visible control
-  // lets visitors pause it independently of decorative reduced-motion styles.
-  let paused = false;
-  const motionToggle = document.querySelector('.motion-toggle');
-  const panels = Array.from(document.querySelectorAll('.hero-panel'));
-  const chapterButtons = Array.from(document.querySelectorAll('[data-chapter]'));
-  const sceneCenters = [0,.32,.64,.94];
-  function updateStory(progress) {
-    const storyProgress = paused ? 0 : progress;
-    let active = 0;
-    sceneCenters.forEach((center,index) => {
-      if (Math.abs(storyProgress-center) < Math.abs(storyProgress-sceneCenters[active])) active=index;
-    });
-    panels.forEach((panel,index) => {
-      const distance = storyProgress-sceneCenters[index];
-      // Keep the outgoing and incoming headlines from competing at mid-transition.
-      const opacity = Math.max(0,Math.min(1,(.165-Math.abs(distance))/.045));
-      panel.style.setProperty('--scene-opacity',opacity.toFixed(3));
-      panel.style.setProperty('--scene-y',`${(-distance*180).toFixed(1)}px`);
-      panel.style.setProperty('--scene-blur',`${((1-opacity)*6).toFixed(1)}px`);
-      panel.classList.toggle('active',index===active);
-      panel.setAttribute('aria-hidden',String(index!==active));
-      panel.inert=index!==active;
-    });
-    chapterButtons.forEach((button,index) => {
-      if(index===active) button.setAttribute('aria-current','step');
-      else button.removeAttribute('aria-current');
-    });
-    hero.dataset.chapter=String(active+1);
+  const header = document.querySelector('.site-header');
+  const counter = document.getElementById('frame-count');
+  const toggle = document.getElementById('motion-toggle');
+  const preference = matchMedia('(prefers-reduced-motion: reduce)');
+  const mobile = matchMedia('(max-width: 700px)').matches;
+  const variant = mobile ? 'mobile' : 'desktop';
+  // Trim the black opening frames so the first view contains the portrait.
+  const FIRST = 47, LAST = 239, CACHE_LIMIT = mobile ? 28 : 40;
+  const frames = new Map(), blobs = new Map(), pending = new Set(), failed = new Set();
+  let paused = preference.matches, position = FIRST, target = FIRST;
+  let raf = 0, lastTime = 0, lastPaint = '', visible = true, direction = 1;
+  const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
+  const url = index => `assets/frames/${variant}/frame-${String(index + 1).padStart(3,'0')}.webp`;
+  function schedule() { if (!raf && !document.hidden) raf = requestAnimationFrame(render); }
+  function trim() {
+    const keys = [...frames.keys()].sort((a,b) => Math.abs(b-position)-Math.abs(a-position));
+    while (frames.size > CACHE_LIMIT) { const key = keys.shift(); frames.get(key).close?.(); frames.delete(key); }
   }
-  chapterButtons.forEach((button,index) => button.addEventListener('click',() => {
-    if(paused) motionToggle.click();
-    const distance=Math.max(1,hero.offsetHeight-stage.offsetHeight);
-    window.scrollTo({top:hero.offsetTop+sceneCenters[index]*distance,behavior:'smooth'});
-  }));
-  const parallaxImages = Array.from(document.querySelectorAll('.portrait img'));
-  function updatePageMotion() {
-    const height=window.innerHeight;
-    parallaxImages.forEach(img => {
-      const rect=img.parentElement.getBoundingClientRect();
-      if(rect.bottom>0&&rect.top<height) img.style.setProperty('--portrait-y',paused?'0px':`${((height/2-rect.top-rect.height/2)*.045).toFixed(1)}px`);
-    });
-    const maxScroll=document.documentElement.scrollHeight-height;
-    header.style.setProperty('--page-progress',maxScroll>0?`${window.scrollY/maxScroll*100}%`:'0%');
+  async function load(index) {
+    pending.add(index);
+    try {
+      let blob = blobs.get(index);
+      if (!blob) {
+        const response = await fetch(url(index));
+        if (!response.ok) throw new Error(`Frame ${index+1} unavailable`);
+        blob = await response.blob(); blobs.set(index, blob);
+      }
+      let bitmap;
+      if (typeof createImageBitmap === 'function') bitmap = await createImageBitmap(blob);
+      else {
+        const objectURL = URL.createObjectURL(blob);
+        try { bitmap = new Image(); bitmap.src = objectURL; await bitmap.decode(); }
+        finally { URL.revokeObjectURL(objectURL); }
+      }
+      frames.set(index, bitmap); trim(); lastPaint = ''; schedule();
+    } catch { failed.add(index); }
+    finally { pending.delete(index); warm(); }
   }
-  const frames = new Array(TOTAL_FRAMES);
-  const pending = new Map();
-  let current=0,target=0,drawn=-1,raf=0;
-  const path = index => `ezgif-8fcc76cbd7cc975c-jpg/ezgif-frame-${String(index+1).padStart(3,'0')}.jpg`;
-  function nearest(index) {
-    if(frames[index]) return index;
-    for(let d=1;d<TOTAL_FRAMES;d++) {
-      if(frames[index-d]) return index-d;
-      if(frames[index+d]) return index+d;
+  function warm() {
+    if (!visible || document.hidden) return;
+    const center = Math.floor(position);
+    const desired = paused ? [Math.round(position)] : [center, Math.min(center+1,LAST), Math.round(target)];
+    if (!paused) for (let i=1;i<=12;i++) {
+      desired.push(clamp(center+i*direction,FIRST,LAST),clamp(center-i*direction,FIRST,LAST));
     }
-    return -1;
+    for (const index of desired) {
+      if (pending.size >= 4) break;
+      if (!frames.has(index) && !pending.has(index) && !failed.has(index)) void load(index);
+    }
   }
-  function draw(index) {
-    const actual=nearest(index);
-    if(actual<0||actual===drawn) return;
-    const img=frames[actual];
-    const scale=Math.max(canvas.width/img.width,canvas.height/img.height);
-    ctx.drawImage(img,(canvas.width-img.width*scale)/2,(canvas.height-img.height*scale)/2,img.width*scale,img.height*scale);
-    drawn=actual;
-    counter.textContent=`${String(actual+1).padStart(3,'0')} / 240`;
+  function paint() {
+    const low = Math.floor(position), high = Math.min(low+1,LAST), fraction = position-low;
+    let key = low;
+    if (!frames.has(key)) key = [...frames.keys()].sort((a,b) => Math.abs(a-position)-Math.abs(b-position))[0];
+    if (key === undefined) return;
+    const first = frames.get(key), second = frames.get(high);
+    const signature = `${position.toFixed(3)}:${key}:${!!second}`;
+    if (signature === lastPaint) return;
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = '#100d0e';
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+    const draw = (image, alpha) => {
+      const scale = Math.max(canvas.width/image.width,canvas.height/image.height);
+      const offset = stage.clientWidth > 1000 ? canvas.width * .16 : 0;
+      ctx.globalAlpha = alpha;
+      ctx.drawImage(image,(canvas.width-image.width*scale)/2+offset,(canvas.height-image.height*scale)/2,image.width*scale,image.height*scale);
+    };
+    draw(first,1);
+    if (second && second!==first && key===low) draw(second,fraction);
+    ctx.globalAlpha = 1;
+    canvas.classList.add('ready');
+    counter.textContent = `${String(key+1).padStart(3,'0')} / 240`;
+    lastPaint = signature;
   }
-  function load(index) {
-    if(frames[index]) return Promise.resolve();
-    if(pending.has(index)) return pending.get(index);
-    const promise=new Promise(resolve => {
-      const img=new Image();
-      img.onload=() => {
-        // Retain smaller frames instead of keeping 240 decoded 4K images in memory.
-        const small=document.createElement('canvas');
-        small.width=1280;
-        small.height=Math.round(img.naturalHeight*1280/img.naturalWidth);
-        small.getContext('2d').drawImage(img,0,0,small.width,small.height);
-        frames[index]=small;
-        // Keep sparse anchors and nearby detail frames; cap the decoded cache.
-        const loaded = frames.map((frame,i) => frame ? i : -1).filter(i => i >= 0);
-        const evictable = loaded.filter(i => i % 12 !== 0 && i !== TOTAL_FRAMES-1 && i !== index)
-          .sort((a,b) => Math.abs(b-target)-Math.abs(a-target));
-        while (loaded.length > 48 && evictable.length) {
-          frames[evictable.shift()] = undefined;
-          loaded.pop();
-        }
-        pending.delete(index);
-        draw(Math.round(current));
-        resolve();
-      };
-      img.onerror=() => {pending.delete(index);resolve();};
-      img.src=path(index);
-    });
-    pending.set(index,promise);
-    return promise;
-  }
-  function animate() {
-    current+=(target-current)*.12;
-    if(Math.abs(target-current)<.05) current=target;
-    draw(Math.round(current));
-    raf=current===target?0:requestAnimationFrame(animate);
-  }
-  function update() {
-    const distance=Math.max(1,hero.offsetHeight-stage.offsetHeight);
-    const progress=Math.max(0,Math.min(1,(window.scrollY-hero.offsetTop)/distance));
-    hero.style.setProperty('--progress',progress.toFixed(4));
-    updateStory(progress);
-    updatePageMotion();
-    header.classList.toggle('scrolled',window.scrollY>40);
-    target=paused?119:progress*(TOTAL_FRAMES-1);
-    const requested = Math.round(target);
-    load(requested).then(() => {
-      if (Math.abs(requested-target) > 2 || paused) return;
-      const nearby = [requested+1,requested+2,requested-1].filter(i => i >= 0 && i < TOTAL_FRAMES);
-      nearby.forEach(load);
-    });
-    if(!raf) raf=requestAnimationFrame(animate);
+  function render(time) {
+    raf = 0;
+    header.classList.toggle('scrolled',window.scrollY>30);
+    if (!visible) { lastTime = 0; return; }
+    const distance = Math.max(1,hero.offsetHeight-stage.offsetHeight);
+    const progress = clamp((window.scrollY-hero.offsetTop)/distance,0,1);
+    if (!paused) target = FIRST + progress*(LAST-FIRST);
+    const delta = lastTime ? Math.min(time-lastTime,50) : 16.67;
+    lastTime = time;
+    direction = target < position ? -1 : 1;
+    if (!paused) position += (target-position)*(1-Math.exp(-delta/85));
+    if (Math.abs(target-position)<.005) position=target;
+    hero.style.setProperty('--progress',((position-FIRST)/(LAST-FIRST)).toFixed(4));
+    warm(); paint();
+    if (!paused && position!==target) schedule(); else lastTime=0;
   }
   function resize() {
-    const dpr=Math.min(window.devicePixelRatio||1,1.5);
-    canvas.width=Math.round(stage.clientWidth*dpr);
-    canvas.height=Math.round(stage.clientHeight*dpr);
-    drawn=-1;
-    draw(Math.round(current));
-    update();
+    const dpr = Math.min(devicePixelRatio||1,1.5);
+    canvas.width = Math.round(stage.clientWidth*dpr); canvas.height = Math.round(stage.clientHeight*dpr);
+    lastPaint = ''; schedule();
   }
-  async function preload() {
-    await load(paused?119:0);
-    if(paused) return;
-    const order=[];
-    for(let i=0;i<TOTAL_FRAMES;i+=12) order.push(i);
-    order.push(TOTAL_FRAMES-1);
-    let next=0;
-    await Promise.all(Array.from({length:4},async () => {
-      while(next<order.length&&!paused) await load(order[next++]);
-    }));
-  }
-  window.addEventListener('scroll',update,{passive:true});
-  window.addEventListener('resize',resize,{passive:true});
-  motionToggle.addEventListener('click', () => {
-    paused = !paused;
-    hero.classList.toggle('motion-paused', paused);
-    document.body.classList.toggle('motion-on',!paused);
-    document.body.classList.toggle('motion-off',paused);
-    motionToggle.textContent = paused ? 'Enable motion' : 'Pause motion';
-    motionToggle.setAttribute('aria-pressed', String(paused));
-    current = paused ? 119 : current;
+  function setMotion(value, preservePosition=false) {
+    const oldHeight=hero.offsetHeight, wasBelow=window.scrollY >= hero.offsetTop+oldHeight;
+    paused=value;
+    if(paused) target=position;
+    document.body.classList.toggle('motion-paused',paused);
+    document.body.classList.toggle('motion-enabled',!paused);
+    toggle.setAttribute('aria-pressed',String(paused));
+    toggle.textContent=paused?'Enable animation':'Pause animation';
+    if(preservePosition) {
+      const top=wasBelow ? window.scrollY + hero.offsetHeight-oldHeight : hero.offsetTop;
+      window.scrollTo({top,behavior:'instant'});
+    }
     resize();
-    preload();
-  });
-  resize();preload();
+  }
+  new IntersectionObserver(entries => {
+    visible=entries[0].isIntersecting;
+    if(visible) schedule();
+  },{rootMargin:'100px'}).observe(hero);
+  window.addEventListener('scroll',schedule,{passive:true});
+  window.addEventListener('resize',resize,{passive:true});
+  document.addEventListener('visibilitychange',() => { if(!document.hidden) schedule(); });
+  preference.addEventListener('change',event => setMotion(event.matches,true));
+  toggle.addEventListener('click',() => setMotion(!paused,true));
+  setMotion(paused);
 })();

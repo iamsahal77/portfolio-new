@@ -10,6 +10,7 @@ const MIME_TYPES = {
   '.jpg': 'image/jpeg',
   '.jpeg': 'image/jpeg',
   '.png': 'image/png',
+  '.webp': 'image/webp',
   '.json': 'application/json'
 };
 
@@ -39,7 +40,7 @@ const server = http.createServer((req, res) => {
     res.writeHead(200, {
       'Content-Type': contentType,
       'Content-Length': stats.size,
-      'Cache-Control': 'public, max-age=3600'
+      'Cache-Control': 'no-cache'
     });
 
     const stream = fs.createReadStream(filePath);
